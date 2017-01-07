@@ -9,6 +9,17 @@ from flask.ext.restful import Api, Resource, reqparse, fields, marshal
 app = Flask(__name__, static_url_path="")
 api = Api(app)
 
+class HelloAPI(Resource):
+    #decorators = [auth.login_required]
+
+    def __init__(self):
+        #self.reqparse = reqparse.RequestParser()
+        #self.reqparse.add_argument('route', type=str, location='json')
+        #self.args = self.reqparse.parse_args()
+        super(HelloAPI, self).__init__()
+
+    def get(self):
+        return {'code': 0, 'message': 'OK', 'data': [],}, 200
 
 class AgencyListAPI(Resource):
     #decorators = [auth.login_required]
@@ -78,7 +89,7 @@ class StopLocationAPI(Resource):
 api.add_resource(AgencyListAPI, '/agency_list', endpoint='')
 api.add_resource(StopsAPI, '/stops', endpoint='')
 api.add_resource(StopLocationAPI, '/stop_location', endpoint='')
-
+api.add_resource(HelloAPI, '/', endpoint='')
 
 if __name__ == '__main__':
     app.run(debug=True)
