@@ -1,5 +1,4 @@
-#!flask/bin/python
-
+#!/usr/bin/env python
 """Alternative version of the ToDo RESTful server implemented using the
 Flask-RESTful extension."""
 
