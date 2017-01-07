@@ -50,8 +50,8 @@ class StopsAPI(Resource):
                     'data': [],}, 200
         
         if route_number == 24:
-            return {'code': 0, 'message': 'OK', 'data': [['stop_name_1', 'stop_number_1'],
-                                                         ['stop_name_2', 'stop_number_2'],
+            return {'code': 0, 'message': 'OK', 'data': [['Victoria Park Ave at St Clair Ave East', '8505'],
+                                                         ['Victoria Park Ave at Eglinton', '8455'],
                                                          ],}, 200
         else:
             return {'code': 20404, 'message': 'Cannot find the route within the system',
