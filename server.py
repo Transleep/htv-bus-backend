@@ -18,7 +18,16 @@ api = Api(app)
 
 
 def get_schedule_metadata_by_agency(agency = ''):
-    """"""
+    """str->tuple
+    
+    Get DB connections and metadata engine for the DB.
+    
+    Hardcoded for now.
+    
+    param: agency: str a string of agency
+    
+    return: tuple: a Schedle and a MetaData object.
+    """""
     agency = agency.lower()
     if agency in 'drt':
         sched = Schedule('./GTFS_Durham_TXT.db')
@@ -35,52 +44,54 @@ def get_schedule_metadata_by_agency(agency = ''):
     return (sched, sched_meta)
 
 class HelloAPI(Resource):
-    #decorators = [auth.login_required]
+    """Hello world!
+    
+    Used to check whether the server is up.
+    """
 
     def __init__(self):
-        #self.reqparse = reqparse.RequestParser()
-        #self.reqparse.add_argument('route', type=str, location='json')
-        #self.args = self.reqparse.parse_args()
         super(HelloAPI, self).__init__()
 
     def get(self):
         return {'code': 0, 'message': 'OK', 'data': [],}, 200
 
 class AgencyListAPI(Resource):
-    #decorators = [auth.login_required]
+    """Get a list of agencies supported.
+    """
 
     def __init__(self):
-        #self.reqparse = reqparse.RequestParser()
-        #self.reqparse.add_argument('route', type=str, location='json')
-        #self.args = self.reqparse.parse_args()
         super(AgencyListAPI, self).__init__()
         
 
     def get(self):
+        """Hard coded for now
+        """
         return {'code': 0, 'message': 'OK', 'data': ['ttc', 'yrt', 'drt', 'grt'],}, 200
 
 
 class StopsAPI(Resource):
-    #decorators = [auth.login_required]
 
     def __init__(self):
+        # paraser
         self.reqparse = reqparse.RequestParser()
         self.reqparse.add_argument('agency', type=str)
         self.reqparse.add_argument('route', type=str)
         self.args = self.reqparse.parse_args()
-        # self.sched_ttc = Schedule('./OpenData_TTC_Schedules.db')
-        # self.sched_ttc_meta = MetaData(bind=self.sched_ttc.engine)
         self.ROUTE_NOT_FOUND = {'code': 20404, 'message': 'Cannot find the route within the system',
                                 'data': [],}, 200
         super(StopsAPI, self).__init__()
 
     def __get_route_id_from_route_number(self, route_number):
+        """self, int->int
+        
+        Get route id from the route number that people knows.
+        """
         routes_table = Table('routes', self.sched_meta, autoload=True)
         return int(routes_table.select(routes_table.c.route_short_name == route_number).execute().first()[0])
 
     @staticmethod
     def __make_query_string_find_stop_name_id_by_route_id(route_id):
-        """mother f**king starboy!"""
+        """The one that gets everything"""
         return """SELECT stops2.stop_name, stops.stop_code
 FROM
     stops,
@@ -99,7 +110,9 @@ ON stops.stop_id = unique_stops.stop_id
 WHERE stops2.stop_id = unique_stops.stop_id""".format(route_id = route_id)
 
     def get(self):
-        print(self.args)
+        """Getting all the stops with the human-readble
+        route number
+        """
         # TODO: could be better
         try:
             route_number = int(self.args['route'])
@@ -128,26 +141,25 @@ WHERE stops2.stop_id = unique_stops.stop_id""".format(route_id = route_id)
         # nothing found
         if len(result) == 0:
             return self.ROUTE_NOT_FOUND
-        else:
+        else:  #found something
             return {'code': 0, 'message': 'OK', 'data': [[str(i[0]), str(i[1])] for i in result],}, 200
 
 
 class StopLocationAPI(Resource):
-    #decorators = [auth.login_required]
+    """Get GPS location with a stop number
+    """
 
     def __init__(self):
         self.reqparse = reqparse.RequestParser()
         self.reqparse.add_argument('agency', type=str)
         self.reqparse.add_argument('stop_code', type=str)
         self.args = self.reqparse.parse_args()
-        # self.sched_ttc = Schedule('./OpenData_TTC_Schedules.db')
-        # self.sched_ttc_meta = MetaData(bind=self.sched_ttc.engine)
         self.STOP_NOT_FOUND = {'code': 20404, 'message': 'Cannot find the stop within the system',
                                 'data': [],}, 200
         super(StopLocationAPI, self).__init__()
 
     def get(self):
-        print(self.args['agency'])
+        # we boldly assmume that all the routes are in number
         try:
             stop_code = int(self.args['stop_code'])
         except Exception as e:
@@ -167,6 +179,7 @@ class StopLocationAPI(Resource):
         try:
             result = list(stops_table.select(stops_table.c.stop_code == stop_code).execute().first()[4:6])
         except TypeError as e:
+            # actually this is not found
             print(e.message)
             print(traceback.print_exc())
             return self.STOP_NOT_FOUND
