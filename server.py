@@ -10,6 +10,8 @@ from gtfs import Schedule
 from sqlalchemy import create_engine, MetaData
 from sqlalchemy.orm import scoped_session, sessionmaker
 from sqlalchemy import Table, Column, Integer, String
+import traceback
+
 
 app = Flask(__name__, static_url_path="")
 api = Api(app)
@@ -126,6 +128,9 @@ class StopLocationAPI(Resource):
         try:
             result = list(stops_table.select(stops_table.c.stop_code == stop_code).execute().first()[4:6])
         except TypeError as e:
+            print(e.message)
+            print(traceback.print_exc())
+            
             return self.STOP_NOT_FOUND
 
         return {'code': 0, 'message': 'OK', 'data': result}, 200
