@@ -1,6 +1,8 @@
 #!/usr/bin/env python
-"""Alternative version of the ToDo RESTful server implemented using the
-Flask-RESTful extension."""
+#coding:utf-8
+# Author:  D.Z
+# Purpose: Backend API
+# Created: 01/07/2017
 
 from flask import Flask, jsonify, abort, make_response
 from flask.ext.restful import Api, Resource, reqparse, fields, marshal
@@ -9,9 +11,9 @@ from sqlalchemy import create_engine, MetaData
 from sqlalchemy.orm import scoped_session, sessionmaker
 from sqlalchemy import Table, Column, Integer, String
 
-
 app = Flask(__name__, static_url_path="")
 api = Api(app)
+
 
 class HelloAPI(Resource):
     #decorators = [auth.login_required]
@@ -87,6 +89,7 @@ class StopsAPI(Resource):
             route_id = self.__get_route_id_from_route_number(route_number)
         except TypeError as e:  # this means nothing found
             return self.ROUTE_NOT_FOUND
+
         stop_query_string = self.__make_query_string_find_stop_name_id_by_route_id(route_id)
 
         result = self.sched_ttc.engine.execute(stop_query_string).fetchall()
@@ -112,22 +115,20 @@ class StopLocationAPI(Resource):
         super(StopLocationAPI, self).__init__()
 
     def get(self):
-        #print(self.args)
         try:
             stop_code = int(self.args['stop_code'])
         except Exception as e:
             return {'code': 20500, 'message': 'Invalid stop code',
                     'data': [],}, 200
-        
-        
-        if stop_code == 8426:
-            return {'code': 0, 'message': 'OK', 'data': [43.782416,-79.326262]}, 200
-        
-        elif  stop_code == 8505:
-            return {'code': 0, 'message': 'OK', 'data': [43.708605,-79.295762]}, 200
-        else:
-            return {'code': 20404, 'message': 'Cannot find the stop within the system',
-                    'data': [],}, 200
+
+        stops_table = Table('stops', self.sched_ttc_meta, autoload=True)
+
+        try:
+            result = list(stops_table.select(stops_table.c.stop_code == stop_code).execute().first()[4:6])
+        except TypeError as e:
+            return self.STOP_NOT_FOUND
+
+        return {'code': 0, 'message': 'OK', 'data': result}, 200
 
 
 api.add_resource(AgencyListAPI, '/agency_list', endpoint='')
