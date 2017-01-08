@@ -130,7 +130,6 @@ class StopLocationAPI(Resource):
         except TypeError as e:
             print(e.message)
             print(traceback.print_exc())
-            
             return self.STOP_NOT_FOUND
 
         return {'code': 0, 'message': 'OK', 'data': result}, 200
