@@ -22,19 +22,23 @@ $ curl "http://htv-bn.ml/agency_list"
 {
     "code": 0, 
     "data": [
-        "ttc"
+        "ttc", 
+        "yrt", 
+        "drt", 
+        "grt"
     ], 
     "message": "OK"
 }
 ```
 
-For dummy server, only TTC available.
 
-##### /stops?route=24
+##### /stops?agency=ttc&route=24
 
 Give a list of routes of one certern route number from one certern agency.
 
 ###### Arguments:
+
+agency: required: False Type: string The agency of transit
 
 route: required: True Type: string The route number looking into
 
@@ -43,7 +47,7 @@ route: required: True Type: string The route number looking into
 list of stop name and stop number
 
 ```
-$ curl "http://htv-bn.ml/stops?route=3"
+$ curl "http://htv-bn.ml/stops?agency=ttc&route=3"
 {"message": "OK", "code": 0, "data": [["KENNEDY ARRIVE", "13398"], ["MCCOWAN ARRIVE", "13502"], ["MCCOWAN STATION - WESTBOUND PLATFORM", "14541"], ["SCARBOROUGH CENTRE STATION - WESTBOUND PLATFORM", "14542"], ["MIDLAND STATION - WESTBOUND PLATFORM", "14543"], ["ELLESMERE STATION - SOUTHBOUND PLATFORM", "14544"], ["LAWRENCE EAST STATION - SOUTHBOUND PLATFORM", "14545"], ["KENNEDY STATION - PLATFORM", "14546"], ["KENNEDY STATION - NORTHBOUND PLATFORM", "14547"], ["LAWRENCE EAST STATION - NORTHBOUND PLATFORM", "14548"], ["ELLESMERE STATION - NORTHBOUND PLATFORM", "14549"], ["MIDLAND STATION - EASTBOUND PLATFORM", "14550"], ["SCARBOROUGH CENTRE STATION - EASTBOUND PLATFORM", "14551"], ["MCCOWAN STATION - PLATFORM", "14552"]]}
 
 $ curl "http://htv-bn.ml/stops?route=99999"
@@ -61,13 +65,14 @@ $ curl "http://htv-bn.ml/stops?route=wtf"
 }
 ```
 
-For dummy server, try with route 24.
 
-##### /stop_location?stop_code=10000
+##### /stop_location?agency=ttc&stop_code=10000
 
 Give the exact location data of the stop.
 
 ###### Arguments:
+
+agency: required: False Type: string The agency of transit
 
 stop_number: required: True Type: integer a unique stop number 
 
@@ -76,7 +81,7 @@ stop_number: required: True Type: integer a unique stop number
 A tuple of latitude
 
 ```
-$ curl "http://htv-bn.ml/stop_location?stop_code=8426"
+$ curl "http://htv-bn.ml/stop_location?agency=ttc&stop_code=8426"
 {
     "code": 0, 
     "data": [
