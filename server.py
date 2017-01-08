@@ -4,6 +4,10 @@ Flask-RESTful extension."""
 
 from flask import Flask, jsonify, abort, make_response
 from flask.ext.restful import Api, Resource, reqparse, fields, marshal
+from gtfs import Schedule
+from sqlalchemy import create_engine, MetaData
+from sqlalchemy.orm import scoped_session, sessionmaker
+
 
 app = Flask(__name__, static_url_path="")
 api = Api(app)
@@ -28,6 +32,7 @@ class AgencyListAPI(Resource):
         #self.reqparse.add_argument('route', type=str, location='json')
         #self.args = self.reqparse.parse_args()
         super(AgencyListAPI, self).__init__()
+        
 
     def get(self):
         return {'code': 0, 'message': 'OK', 'data': ['ttc'],}, 200
@@ -39,23 +44,52 @@ class StopsAPI(Resource):
         self.reqparse = reqparse.RequestParser()
         self.reqparse.add_argument('route', type=str)
         self.args = self.reqparse.parse_args()
+        self.sched_ttc = Schedule('./OpenData_TTC_Schedules.db')
+        self.sched_ttc_meta = MetaData(bind=sched.engine)
         super(StopsAPI, self).__init__()
 
+    def __get_route_id_from_route_number(self, route_number):
+        routes_table = Table('routes', self.sched_ttc_meta, autoload=True)
+        return int(routes_table.select(routes_table.c.route_short_name == route_number).execute().first()[0])
+
+    @staticmethod
+    def __make_query_string_find_stop_name_id_by_route_id(route_id):
+        """mother f**king starboy!"""
+        return """SELECT stop_name, unique_stops.stop_id
+            FROM
+                stops,
+                (SELECT stop_id, route_id
+                 FROM
+                 stop_times,
+                 (SELECT trip_id, route_id
+                  FROM trips
+                  WHERE route_id IN ({route_id})
+                  GROUP BY shape_id
+                  ) AS unique_trips
+                 WHERE stop_times.trip_id = unique_trips.trip_id
+                 GROUP BY stop_id) AS unique_stops
+            WHERE stops.stop_id = unique_stops.stop_id""".format(route_id = route_id)
+
     def get(self):
-        #print(self.args)
+        # TODO: could be better
         try:
             route_number = int(self.args['route'])
         except Exception as e:
             return {'code': 20500, 'message': 'Invalid route number',
                     'data': [],}, 200
         
-        if route_number == 24:
-            return {'code': 0, 'message': 'OK', 'data': [['Victoria Park Ave at St Clair Ave East', '8505'],
-                                                         ['Victoria Park Ave at Eglinton', '8455'],
-                                                         ],}, 200
-        else:
+        route_id = self.__get_route_id_from_route_number(route_number)
+        
+        stop_query_string = self.__make_query_string_find_stop_name_id_by_route_id(route_id)
+
+        result = sched.engine.execute(stop_query_string).fetchall()
+        
+        # nothing found
+        if len(result) == 0:
             return {'code': 20404, 'message': 'Cannot find the route within the system',
                     'data': [],}, 200
+        else:
+            return {'code': 0, 'message': 'OK', 'data': result,}, 200
 
 
 class StopLocationAPI(Resource):
