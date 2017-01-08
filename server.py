@@ -81,20 +81,22 @@ class StopsAPI(Resource):
     @staticmethod
     def __make_query_string_find_stop_name_id_by_route_id(route_id):
         """mother f**king starboy!"""
-        return """SELECT stop_name, unique_stops.stop_id
-            FROM
-                stops,
-                (SELECT stop_id, route_id
-                 FROM
-                 stop_times,
-                 (SELECT trip_id, route_id
-                  FROM trips
-                  WHERE route_id IN ({route_id})
-                  GROUP BY shape_id
-                  ) AS unique_trips
-                 WHERE stop_times.trip_id = unique_trips.trip_id
-                 GROUP BY stop_id) AS unique_stops
-            WHERE stops.stop_id = unique_stops.stop_id""".format(route_id = route_id)
+        return """SELECT stops2.stop_name, stops.stop_code
+FROM
+    stops,
+    (SELECT stop_id, route_id
+     FROM
+     stop_times,
+     (SELECT trip_id, route_id
+      FROM trips
+      WHERE route_id IN ({route_id})
+      GROUP BY shape_id
+      ) AS unique_trips
+     WHERE stop_times.trip_id = unique_trips.trip_id
+     GROUP BY stop_id) AS unique_stops
+LEFT JOIN stops AS stops2
+ON stops.stop_id = unique_stops.stop_id
+WHERE stops2.stop_id = unique_stops.stop_id""".format(route_id = route_id)
 
     def get(self):
         print(self.args)
