@@ -17,6 +17,23 @@ app = Flask(__name__, static_url_path="")
 api = Api(app)
 
 
+def get_schedule_metadata_by_agency(agency = ''):
+    """"""
+    agency = agency.lower()
+    if agency in 'drt':
+        sched = Schedule('./GTFS_Durham_TXT.db')
+        sched_meta = MetaData(bind=sched.engine)
+    elif agency in 'grt':
+        sched = Schedule('./GRT_GTFS.db')
+        sched_meta = MetaData(bind=sched.engine)
+    elif agency in 'yrt':
+        sched = Schedule('./YRT_GTFS.db')
+        sched_meta = MetaData(bind=sched.engine)
+    else:
+        sched = Schedule('./OpenData_TTC_Schedules.db')
+        sched_meta = MetaData(bind=sched.engine)
+    return (sched, sched_meta)
+
 class HelloAPI(Resource):
     #decorators = [auth.login_required]
 
@@ -40,7 +57,7 @@ class AgencyListAPI(Resource):
         
 
     def get(self):
-        return {'code': 0, 'message': 'OK', 'data': ['ttc'],}, 200
+        return {'code': 0, 'message': 'OK', 'data': ['ttc', 'yrt', 'drt', 'grt'],}, 200
 
 
 class StopsAPI(Resource):
@@ -48,16 +65,17 @@ class StopsAPI(Resource):
 
     def __init__(self):
         self.reqparse = reqparse.RequestParser()
+        self.reqparse.add_argument('agency', type=str)
         self.reqparse.add_argument('route', type=str)
         self.args = self.reqparse.parse_args()
-        self.sched_ttc = Schedule('./OpenData_TTC_Schedules.db')
-        self.sched_ttc_meta = MetaData(bind=self.sched_ttc.engine)
+        # self.sched_ttc = Schedule('./OpenData_TTC_Schedules.db')
+        # self.sched_ttc_meta = MetaData(bind=self.sched_ttc.engine)
         self.ROUTE_NOT_FOUND = {'code': 20404, 'message': 'Cannot find the route within the system',
                                 'data': [],}, 200
         super(StopsAPI, self).__init__()
 
     def __get_route_id_from_route_number(self, route_number):
-        routes_table = Table('routes', self.sched_ttc_meta, autoload=True)
+        routes_table = Table('routes', self.sched_meta, autoload=True)
         return int(routes_table.select(routes_table.c.route_short_name == route_number).execute().first()[0])
 
     @staticmethod
@@ -79,12 +97,21 @@ class StopsAPI(Resource):
             WHERE stops.stop_id = unique_stops.stop_id""".format(route_id = route_id)
 
     def get(self):
+        print(self.args)
         # TODO: could be better
         try:
             route_number = int(self.args['route'])
         except Exception as e:
             return {'code': 20500, 'message': 'Invalid route number',
                     'data': [],}, 200
+
+        try:
+            if self.args['agency']:
+                self.sched, self.sched_meta = get_schedule_metadata_by_agency(self.args['agency'])
+            else:
+                self.sched, self.sched_meta = get_schedule_metadata_by_agency('ttc')
+        except:
+            self.sched, self.sched_meta = get_schedule_metadata_by_agency('ttc')
 
         # error handling done here, not all numbers are valid routes
         try:
@@ -94,7 +121,7 @@ class StopsAPI(Resource):
 
         stop_query_string = self.__make_query_string_find_stop_name_id_by_route_id(route_id)
 
-        result = self.sched_ttc.engine.execute(stop_query_string).fetchall()
+        result = self.sched.engine.execute(stop_query_string).fetchall()
 
         # nothing found
         if len(result) == 0:
@@ -108,22 +135,32 @@ class StopLocationAPI(Resource):
 
     def __init__(self):
         self.reqparse = reqparse.RequestParser()
+        self.reqparse.add_argument('agency', type=str)
         self.reqparse.add_argument('stop_code', type=str)
         self.args = self.reqparse.parse_args()
-        self.sched_ttc = Schedule('./OpenData_TTC_Schedules.db')
-        self.sched_ttc_meta = MetaData(bind=self.sched_ttc.engine)
+        # self.sched_ttc = Schedule('./OpenData_TTC_Schedules.db')
+        # self.sched_ttc_meta = MetaData(bind=self.sched_ttc.engine)
         self.STOP_NOT_FOUND = {'code': 20404, 'message': 'Cannot find the stop within the system',
                                 'data': [],}, 200
         super(StopLocationAPI, self).__init__()
 
     def get(self):
+        print(self.args['agency'])
         try:
             stop_code = int(self.args['stop_code'])
         except Exception as e:
             return {'code': 20500, 'message': 'Invalid stop code',
                     'data': [],}, 200
 
-        stops_table = Table('stops', self.sched_ttc_meta, autoload=True)
+        try:
+            if self.args['agency']:
+                self.sched, self.sched_meta = get_schedule_metadata_by_agency(self.args['agency'])
+            else:
+                self.sched, self.sched_meta = get_schedule_metadata_by_agency('ttc')
+        except:
+            self.sched, self.sched_meta = get_schedule_metadata_by_agency('ttc')
+
+        stops_table = Table('stops', self.sched_meta, autoload=True)
 
         try:
             result = list(stops_table.select(stops_table.c.stop_code == stop_code).execute().first()[4:6])
